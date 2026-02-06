@@ -1,0 +1,33 @@
+version: 1
+build:
+  main: cmd/monod
+  binary: monod
+validation: sovereign
+genesis:
+  app_name: mono
+  chain_id: mono
+default_denom: alyth
+accounts: 
+- name: alice
+  coins:
+  - 200000000alyth
+- name: bob
+  coins:
+  - 100000000alyth
+client:
+  openapi:
+    path: docs/static/openapi.json
+faucet:
+  name: bob
+  coins:
+  - 100000alyth
+validators:
+- name: alice
+  home: ~/.mono
+  bonded: 100000000alyth
+- name: validator1
+  home: ~/.mono
+  bonded: 200000000alyth
+- name: validator2
+  home: ~/.mono
+  bonded: 100000000alyth
