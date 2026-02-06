@@ -34,10 +34,10 @@ type mockBankKeeper struct {
 	burnCoinsCalled bool
 
 	// For simulating post-burn verification failures
-	getBalanceCalls      int
-	getSupplyCalls       int
-	balanceOnSecondCall  sdk.Coin // If set, return this on 2nd GetBalance call
-	supplyOnSecondCall   sdk.Coin // If set, return this on 2nd GetSupply call
+	getBalanceCalls     int
+	getSupplyCalls      int
+	balanceOnSecondCall sdk.Coin // If set, return this on 2nd GetBalance call
+	supplyOnSecondCall  sdk.Coin // If set, return this on 2nd GetSupply call
 }
 
 func newMockBankKeeper() *mockBankKeeper {

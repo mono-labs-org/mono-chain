@@ -29,6 +29,7 @@ import (
 
 	"github.com/monolythium/mono-chain/docs"
 	burnmodulekeeper "github.com/monolythium/mono-chain/x/burn/keeper"
+	monomodulekeeper "github.com/monolythium/mono-chain/x/mono/keeper"
 )
 
 const (
@@ -67,6 +68,7 @@ type App struct {
 	// simulation manager
 	sm         *module.SimulationManager
 	BurnKeeper burnmodulekeeper.Keeper
+	MonoKeeper monomodulekeeper.Keeper
 }
 
 func init() {
@@ -132,6 +134,7 @@ func New(
 		&app.StakingKeeper,
 		&app.DistrKeeper,
 		&app.BurnKeeper,
+		&app.MonoKeeper,
 	); err != nil {
 		panic(err)
 	}

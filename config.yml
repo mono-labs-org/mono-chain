@@ -6,6 +6,13 @@ validation: sovereign
 genesis:
   app_name: mono
   chain_id: mono
+  app_state:
+    mono:
+      params:
+        fee_burn_percent: "0.9"
+        validator_registration_fee:
+          denom: alyth
+          amount: "100000000000000000000000"
 default_denom: alyth
 accounts: 
 - name: alice

@@ -23,6 +23,8 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	_ "github.com/monolythium/mono-chain/x/burn/module"
 	burnmoduletypes "github.com/monolythium/mono-chain/x/burn/types"
+	_ "github.com/monolythium/mono-chain/x/mono/module"
+	monomoduletypes "github.com/monolythium/mono-chain/x/mono/types"
 
 	"github.com/cosmos/cosmos-sdk/runtime"
 	_ "github.com/cosmos/cosmos-sdk/x/auth"           // import for side-effects
@@ -40,7 +42,8 @@ var (
 		{Account: minttypes.ModuleName, Permissions: []string{authtypes.Minter}},
 		{Account: stakingtypes.BondedPoolName, Permissions: []string{authtypes.Burner, stakingtypes.ModuleName}},
 		{Account: stakingtypes.NotBondedPoolName, Permissions: []string{authtypes.Burner, stakingtypes.ModuleName}},
-		{Account: burnmoduletypes.ModuleName, Permissions: []string{authtypes.Burner}}}
+		{Account: burnmoduletypes.ModuleName, Permissions: []string{authtypes.Burner}},
+		{Account: monomoduletypes.ModuleName, Permissions: []string{authtypes.Burner}}}
 
 	// blocked account addresses
 	blockAccAddrs = []string{
@@ -69,16 +72,20 @@ var (
 					// CanWithdrawInvariant invariant.
 					// NOTE: staking module is required if HistoricalEntries param > 0
 					BeginBlockers: []string{
+						// chain modules
+						monomoduletypes.ModuleName,
+						burnmoduletypes.ModuleName,
+						// sdk modules
 						distrtypes.ModuleName,
 						stakingtypes.ModuleName,
-						// chain modules
-						burnmoduletypes.ModuleName,
 						// this line is used by starport scaffolding # stargate/app/beginBlockers
 					},
 					EndBlockers: []string{
-						stakingtypes.ModuleName,
 						// chain modules
+						monomoduletypes.ModuleName,
 						burnmoduletypes.ModuleName,
+						// sdk modules
+						stakingtypes.ModuleName,
 						// this line is used by starport scaffolding # stargate/app/endBlockers
 					},
 					// The following is mostly only needed when ModuleName != StoreKey name.
@@ -101,6 +108,7 @@ var (
 						genutiltypes.ModuleName,
 						// chain modules
 						burnmoduletypes.ModuleName,
+						monomoduletypes.ModuleName,
 						// this line is used by starport scaffolding # stargate/app/initGenesis
 					},
 				}),
@@ -154,6 +162,10 @@ var (
 			{
 				Name:   burnmoduletypes.ModuleName,
 				Config: appconfig.WrapAny(&burnmoduletypes.Module{}),
+			},
+			{
+				Name:   monomoduletypes.ModuleName,
+				Config: appconfig.WrapAny(&monomoduletypes.Module{}),
 			},
 			// this line is used by starport scaffolding # stargate/app/moduleConfig
 		},
