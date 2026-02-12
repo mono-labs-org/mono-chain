@@ -42,6 +42,9 @@ func (p Params) Validate() error {
 }
 
 func validateFeeBurnPercent(v math.LegacyDec) error {
+	if v.IsNil() {
+		return errorsmod.Wrap(ErrInvalidFeeBurnPercent, "must not be nil")
+	}
 	if v.IsNegative() {
 		return errorsmod.Wrapf(ErrInvalidFeeBurnPercent, "must not be negative: %s", v)
 	}
@@ -55,8 +58,8 @@ func validateValidatorRegistrationFee(v sdk.Coin) error {
 	if err := v.Validate(); err != nil {
 		return errorsmod.Wrapf(ErrInvalidRegistrationFee, "%s", err)
 	}
-	if v.IsNegative() {
-		return errorsmod.Wrap(ErrInvalidRegistrationFee, "must be zero or positive")
+	if !v.IsZero() && v.Denom != sdk.DefaultBondDenom {
+		return errorsmod.Wrapf(ErrInvalidRegistrationFee, "denom must be %s, got %s", sdk.DefaultBondDenom, v.Denom)
 	}
 	return nil
 }

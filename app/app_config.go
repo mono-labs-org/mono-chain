@@ -105,10 +105,11 @@ var (
 						distrtypes.ModuleName,
 						stakingtypes.ModuleName,
 						vestingtypes.ModuleName,
-						genutiltypes.ModuleName,
 						// chain modules
 						burnmoduletypes.ModuleName,
 						monomoduletypes.ModuleName,
+
+						genutiltypes.ModuleName,
 						// this line is used by starport scaffolding # stargate/app/initGenesis
 					},
 				}),
@@ -140,8 +141,10 @@ var (
 				}),
 			},
 			{
-				Name:   "tx",
-				Config: appconfig.WrapAny(&txconfigv1.Config{}),
+				Name: "tx",
+				Config: appconfig.WrapAny(&txconfigv1.Config{
+					SkipAnteHandler: true,
+				}),
 			},
 			{
 				Name:   genutiltypes.ModuleName,
