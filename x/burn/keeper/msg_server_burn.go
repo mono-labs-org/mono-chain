@@ -36,11 +36,11 @@ func (k msgServer) Burn(ctx context.Context, msg *types.MsgBurn) (*types.MsgBurn
 	userBalance := k.bankKeeper.GetBalance(sdkCtx, fromAddr, msg.Amount.Denom)
 	totalSupply := k.bankKeeper.GetSupply(sdkCtx, msg.Amount.Denom)
 	if userBalance.Amount.GT(totalSupply.Amount) {
-		panic(errorsmod.Wrapf(
+		return nil, errorsmod.Wrapf(
 			types.ErrStateCorruption,
 			"user balance %s exceeds total supply %s",
 			userBalance, totalSupply,
-		))
+		)
 	}
 
 	// Verify supply won't underflow after burn
@@ -67,7 +67,7 @@ func (k msgServer) Burn(ctx context.Context, msg *types.MsgBurn) (*types.MsgBurn
 	// Burn from module account
 	err = k.bankKeeper.BurnCoins(sdkCtx, types.ModuleName, coins)
 	if err != nil {
-		panic(errorsmod.Wrapf(types.ErrBurnFailed, "failed to burn after transfer: %v", err))
+		return nil, errorsmod.Wrapf(types.ErrBurnFailed, "failed to burn after transfer: %v", err)
 	}
 
 	// Post-burn verification
@@ -75,21 +75,21 @@ func (k msgServer) Burn(ctx context.Context, msg *types.MsgBurn) (*types.MsgBurn
 	newUserBalance := k.bankKeeper.GetBalance(sdkCtx, fromAddr, msg.Amount.Denom)
 	expectedBalance := userBalance.Sub(msg.Amount)
 	if !newUserBalance.Equal(expectedBalance) {
-		panic(errorsmod.Wrapf(
+		return nil, errorsmod.Wrapf(
 			types.ErrPostBurnValidation,
 			"balance mismatch - expected %s, got %s",
 			expectedBalance, newUserBalance,
-		))
+		)
 	}
 
 	newSupply := k.bankKeeper.GetSupply(sdkCtx, msg.Amount.Denom)
 	expectedSupply := totalSupply.Sub(msg.Amount)
 	if !newSupply.Equal(expectedSupply) {
-		panic(errorsmod.Wrapf(
+		return nil, errorsmod.Wrapf(
 			types.ErrPostBurnValidation,
 			"supply mismatch - expected %s, got %s",
 			expectedSupply, newSupply,
-		))
+		)
 	}
 
 	sdkCtx.EventManager().EmitEvent(

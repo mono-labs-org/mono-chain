@@ -21,5 +21,6 @@ var (
 	ErrBurnDenomMismatch         = errors.Register(ModuleName, 1203, "burn deposit denom does not match required denom")
 	ErrInvalidValidatorAddress   = errors.Register(ModuleName, 1204, "invalid validator address")
 	ErrInvalidBurnAddress        = errors.Register(ModuleName, 1205, "invalid burn address in transaction")
-	ErrDuplicateRegistrationInfo = errors.Register(ModuleName, 1206, "validator registration limited to one per transaction")
+	ErrDuplicateRegistrationInfo         = errors.Register(ModuleName, 1206, "validator registration limited to one per transaction")
+	ErrInsufficientMinSelfDelegation     = errors.Register(ModuleName, 1207, "minimum self-delegation below required amount")
 )

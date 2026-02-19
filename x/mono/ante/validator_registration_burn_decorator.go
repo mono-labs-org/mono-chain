@@ -3,6 +3,7 @@ package ante
 import (
 	"bytes"
 
+	"cosmossdk.io/core/address"
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -16,11 +17,17 @@ import (
 // MsgCreateValidator must also include a MsgBurn of at least
 // validator_registration_fee from the same key as the validator operator.
 type ValidatorRegistrationBurnDecorator struct {
-	monoKeeper keeper.Keeper
+	monoKeeper            keeper.Keeper
+	accountAddressCodec   address.Codec
+	validatorAddressCodec address.Codec
 }
 
-func NewValidatorRegistrationBurnDecorator(mk keeper.Keeper) ValidatorRegistrationBurnDecorator {
-	return ValidatorRegistrationBurnDecorator{monoKeeper: mk}
+func NewValidatorRegistrationBurnDecorator(mk keeper.Keeper, accCodec, valCodec address.Codec) ValidatorRegistrationBurnDecorator {
+	return ValidatorRegistrationBurnDecorator{
+		monoKeeper:            mk,
+		accountAddressCodec:   accCodec,
+		validatorAddressCodec: valCodec,
+	}
 }
 
 func (vbd ValidatorRegistrationBurnDecorator) AnteHandle(
@@ -29,8 +36,9 @@ func (vbd ValidatorRegistrationBurnDecorator) AnteHandle(
 	simulate bool,
 	next sdk.AnteHandler,
 ) (sdk.Context, error) {
-	// Skip during genesis — initial validator set doesn't require burn
-	if ctx.BlockHeight() == 0 {
+	// Skip during genesis
+	// Initial validator set doesn't require burn
+	if !ctx.IsCheckTx() && (ctx.BlockHeight() == 0) {
 		return next(ctx, tx, simulate)
 	}
 
@@ -68,17 +76,17 @@ func (vbd ValidatorRegistrationBurnDecorator) AnteHandle(
 		return ctx, types.ErrMissingBurnInfo
 	}
 
-	valAddr, err := sdk.ValAddressFromBech32(createMsg.ValidatorAddress)
+	valAddrBytes, err := vbd.validatorAddressCodec.StringToBytes(createMsg.ValidatorAddress)
 	if err != nil {
-		return ctx, types.ErrInvalidValidatorAddress
+		return ctx, errorsmod.Wrapf(types.ErrInvalidValidatorAddress, "failed to decode validator address: %s", err)
 	}
 
-	burnAddr, err := sdk.AccAddressFromBech32(burnMsg.FromAddress)
+	burnAddrBytes, err := vbd.accountAddressCodec.StringToBytes(burnMsg.FromAddress)
 	if err != nil {
-		return ctx, types.ErrInvalidBurnAddress
+		return ctx, errorsmod.Wrapf(types.ErrInvalidBurnAddress, "failed to decode burn from address: %s", err)
 	}
 
-	if !bytes.Equal(valAddr.Bytes(), burnAddr.Bytes()) {
+	if !bytes.Equal(valAddrBytes, burnAddrBytes) {
 		return ctx, types.ErrBurnSenderMismatch
 	}
 
@@ -90,6 +98,15 @@ func (vbd ValidatorRegistrationBurnDecorator) AnteHandle(
 		return ctx, errorsmod.Wrapf(
 			types.ErrInsufficientBurnAmount,
 			"Validator registration requires a burn of: %s %s",
+			params.ValidatorRegistrationFee.Amount,
+			params.ValidatorRegistrationFee.Denom,
+		)
+	}
+
+	if createMsg.MinSelfDelegation.LT(params.ValidatorRegistrationFee.Amount) {
+		return ctx, errorsmod.Wrapf(
+			types.ErrInsufficientMinSelfDelegation,
+			"minimum self-delegation must be at least %s %s",
 			params.ValidatorRegistrationFee.Amount,
 			params.ValidatorRegistrationFee.Denom,
 		)

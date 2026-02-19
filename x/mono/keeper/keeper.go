@@ -24,6 +24,7 @@ type Keeper struct {
 
 	bankKeeper    types.BankKeeper
 	stakingKeeper types.StakingKeeper
+	distrKeeper   types.DistributionKeeper
 }
 
 func NewKeeper(
@@ -34,6 +35,7 @@ func NewKeeper(
 
 	bankKeeper types.BankKeeper,
 	stakingKeeper types.StakingKeeper,
+	distrKeeper types.DistributionKeeper,
 ) Keeper {
 	if _, err := addressCodec.BytesToString(authority); err != nil {
 		panic(fmt.Sprintf("invalid authority address %s: %s", authority, err))
@@ -49,6 +51,7 @@ func NewKeeper(
 
 		bankKeeper:    bankKeeper,
 		stakingKeeper: stakingKeeper,
+		distrKeeper:   distrKeeper,
 		Params:        collections.NewItem(sb, types.ParamsKey, "params", codec.CollValue[types.Params](cdc)),
 	}
 

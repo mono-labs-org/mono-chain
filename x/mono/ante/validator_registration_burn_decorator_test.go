@@ -1,6 +1,7 @@
 package ante_test
 
 import (
+	"bytes"
 	"os"
 	"testing"
 
@@ -51,7 +52,7 @@ func initDepositFixture(t *testing.T, registrationFee sdk.Coin) *depositFixture 
 	addressCodec := addresscodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix())
 	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
 	storeService := runtime.NewKVStoreService(storeKey)
-	ctx := testutil.DefaultContextWithDB(t, storeKey, storetypes.NewTransientStoreKey("transient_test")).Ctx.WithBlockHeight(1)
+	ctx := testutil.DefaultContextWithDB(t, storeKey, storetypes.NewTransientStoreKey("transient_test")).Ctx.WithBlockHeight(2)
 
 	authority := authtypes.NewModuleAddress(types.GovModuleName)
 
@@ -60,6 +61,7 @@ func initDepositFixture(t *testing.T, registrationFee sdk.Coin) *depositFixture 
 		encCfg.Codec,
 		addressCodec,
 		authority,
+		nil,
 		nil,
 		nil,
 	)
@@ -71,9 +73,13 @@ func initDepositFixture(t *testing.T, registrationFee sdk.Coin) *depositFixture 
 	require.NoError(t, k.Params.Set(ctx, params))
 
 	return &depositFixture{
-		ctx:       ctx,
-		keeper:    k,
-		decorator: monoante.NewValidatorRegistrationBurnDecorator(k),
+		ctx:    ctx,
+		keeper: k,
+		decorator: monoante.NewValidatorRegistrationBurnDecorator(
+			k,
+			addresscodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
+			addresscodec.NewBech32Codec(sdk.GetConfig().GetBech32ValidatorAddrPrefix()),
+		),
 	}
 }
 
@@ -104,8 +110,8 @@ func makeBurnMsg(addrBytes []byte, amount math.Int) *burnmoduletypes.MsgBurn {
 }
 
 var (
-	addr1  = []byte("mono1_______________")
-	addr2  = []byte("mono2_______________")
+	addr1  = bytes.Repeat([]byte{0x01}, 20)
+	addr2  = bytes.Repeat([]byte{0x02}, 20)
 	regFee = sdk.NewCoin(sdk.DefaultBondDenom, VALIDATOR_LYTH_REQUIREMENT)
 )
 
@@ -162,6 +168,29 @@ func TestValidatorRegistrationBurn_MissingBurn(t *testing.T) {
 	}}
 	_, err := f.decorator.AnteHandle(f.ctx, tx, false, noopAnteHandler)
 
+	require.Error(t, err)
+	require.ErrorIs(t, err, types.ErrMissingBurnInfo)
+}
+
+func TestValidatorRegistrationBurn_GenesisHeightBypass(t *testing.T) {
+	f := initDepositFixture(t, regFee)
+
+	tx := mockTx{msgs: []sdk.Msg{
+		makeCreateValidatorMsg(addr1),
+	}}
+
+	_, err := f.decorator.AnteHandle(f.ctx.WithBlockHeight(0), tx, false, noopAnteHandler)
+	require.NoError(t, err)
+}
+
+func TestValidatorRegistrationBurn_HeightOneIsEnforced(t *testing.T) {
+	f := initDepositFixture(t, regFee)
+
+	tx := mockTx{msgs: []sdk.Msg{
+		makeCreateValidatorMsg(addr1),
+	}}
+
+	_, err := f.decorator.AnteHandle(f.ctx.WithBlockHeight(1), tx, false, noopAnteHandler)
 	require.Error(t, err)
 	require.ErrorIs(t, err, types.ErrMissingBurnInfo)
 }
@@ -318,12 +347,16 @@ func TestValidatorRegistrationBurn_ParamsReadFailure(t *testing.T) {
 	addressCodec := addresscodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix())
 	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
 	storeService := runtime.NewKVStoreService(storeKey)
-	ctx := testutil.DefaultContextWithDB(t, storeKey, storetypes.NewTransientStoreKey("transient_test")).Ctx.WithBlockHeight(1)
+	ctx := testutil.DefaultContextWithDB(t, storeKey, storetypes.NewTransientStoreKey("transient_test")).Ctx.WithBlockHeight(2)
 
 	authority := authtypes.NewModuleAddress(types.GovModuleName)
-	k := keeper.NewKeeper(storeService, encCfg.Codec, addressCodec, authority, nil, nil)
+	k := keeper.NewKeeper(storeService, encCfg.Codec, addressCodec, authority, nil, nil, nil)
 
-	decorator := monoante.NewValidatorRegistrationBurnDecorator(k)
+	decorator := monoante.NewValidatorRegistrationBurnDecorator(
+		k,
+		addresscodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
+		addresscodec.NewBech32Codec(sdk.GetConfig().GetBech32ValidatorAddrPrefix()),
+	)
 
 	tx := mockTx{msgs: []sdk.Msg{
 		makeBurnMsg(addr1, VALIDATOR_LYTH_REQUIREMENT),

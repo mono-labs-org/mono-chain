@@ -208,9 +208,9 @@ func TestMsgServerBurn_StateCorruption_BalanceExceedsSupply(t *testing.T) {
 		Amount:      sdk.NewCoin(app.DefaultBondDenom, math.NewInt(100)),
 	}
 
-	require.Panics(t, func() {
-		_, _ = f.msgServer.Burn(f.ctx, msg)
-	})
+	_, err := f.msgServer.Burn(f.ctx, msg)
+	require.Error(t, err)
+	require.ErrorIs(t, err, types.ErrStateCorruption)
 }
 
 func TestMsgServerBurn_SupplyUnderflow(t *testing.T) {
@@ -270,7 +270,7 @@ func TestMsgServerBurn_SupplyLessThanBurn(t *testing.T) {
 	require.False(t, mockBank.sendCoinsCalled)
 }
 
-func TestMsgServerBurn_BurnCoinsFailure_ShouldPanic(t *testing.T) {
+func TestMsgServerBurn_BurnCoinsFailure_ShouldError(t *testing.T) {
 	mockBank := newMockBankKeeper()
 	f := initBurnFixture(t, mockBank)
 
@@ -286,9 +286,9 @@ func TestMsgServerBurn_BurnCoinsFailure_ShouldPanic(t *testing.T) {
 		Amount:      sdk.NewCoin(app.DefaultBondDenom, math.NewInt(100)),
 	}
 
-	require.Panics(t, func() {
-		_, _ = f.msgServer.Burn(f.ctx, msg)
-	})
+	_, err := f.msgServer.Burn(f.ctx, msg)
+	require.Error(t, err)
+	require.ErrorIs(t, err, types.ErrBurnFailed)
 	require.True(t, mockBank.sendCoinsCalled)
 }
 
@@ -415,10 +415,10 @@ func TestMsgServerBurn_PostBurnBalanceInconsistent(t *testing.T) {
 		Amount:      sdk.NewCoin(app.DefaultBondDenom, math.NewInt(100)),
 	}
 
-	// Should panic when post-burn verification detects inconsistency
-	require.Panics(t, func() {
-		_, _ = f.msgServer.Burn(f.ctx, msg)
-	})
+	// Should return error when post-burn verification detects inconsistency
+	_, err := f.msgServer.Burn(f.ctx, msg)
+	require.Error(t, err)
+	require.ErrorIs(t, err, types.ErrPostBurnValidation)
 
 	// Verify burn was attempted
 	require.True(t, mockBank.sendCoinsCalled)
@@ -446,10 +446,10 @@ func TestMsgServerBurn_PostBurnSupplyInconsistent(t *testing.T) {
 		Amount:      sdk.NewCoin(app.DefaultBondDenom, math.NewInt(100)),
 	}
 
-	// Should panic when post-burn verification detects inconsistency
-	require.Panics(t, func() {
-		_, _ = f.msgServer.Burn(f.ctx, msg)
-	})
+	// Should return error when post-burn verification detects inconsistency
+	_, err := f.msgServer.Burn(f.ctx, msg)
+	require.Error(t, err)
+	require.ErrorIs(t, err, types.ErrPostBurnValidation)
 
 	// Verify burn was attempted
 	require.True(t, mockBank.sendCoinsCalled)

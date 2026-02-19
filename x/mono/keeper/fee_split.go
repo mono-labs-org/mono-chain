@@ -38,6 +38,11 @@ func (k Keeper) ProcessFeeSplit(ctx context.Context) error {
 			continue
 		}
 
+		// Only apply fee split to native denom (alyth).
+		if coin.Denom != sdk.DefaultBondDenom {
+			continue
+		}
+
 		burnAmt := coin.Amount.ToLegacyDec().Mul(feeBurnPercent).TruncateInt()
 		proposerAmt := coin.Amount.Sub(burnAmt)
 
@@ -123,10 +128,10 @@ func (k Keeper) resolveProposerAccount(ctx context.Context, consAddr sdk.ConsAdd
 	}
 
 	operAddrStr := validator.GetOperator()
-	operAddr, err := sdk.ValAddressFromBech32(operAddrStr)
+	operAddrBytes, err := k.stakingKeeper.ValidatorAddressCodec().StringToBytes(operAddrStr)
 	if err != nil {
 		return nil, errorsmod.Wrapf(types.ErrProposerNotFound, "invalid operator address %s: %v", operAddrStr, err)
 	}
 
-	return sdk.AccAddress(operAddr), nil
+	return k.distrKeeper.GetDelegatorWithdrawAddr(ctx, sdk.AccAddress(operAddrBytes))
 }

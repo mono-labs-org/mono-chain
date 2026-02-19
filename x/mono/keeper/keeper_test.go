@@ -47,6 +47,7 @@ func initFixture(t *testing.T) *fixture {
 		authority,
 		nil,
 		nil,
+		nil,
 	)
 
 	// Initialize params

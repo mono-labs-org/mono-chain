@@ -12,8 +12,13 @@ import (
 // StakingKeeper defines the expected interface for the Staking module.
 type StakingKeeper interface {
 	ConsensusAddressCodec() address.Codec
+	ValidatorAddressCodec() address.Codec
 	ValidatorByConsAddr(context.Context, sdk.ConsAddress) (stakingtypes.ValidatorI, error)
-	// Methods imported from account should be defined here
+}
+
+// DistributionKeeper defines the expected interface for the Distribution module.
+type DistributionKeeper interface {
+	GetDelegatorWithdrawAddr(ctx context.Context, delAddr sdk.AccAddress) (sdk.AccAddress, error)
 }
 
 // AuthKeeper defines the expected interface for the Auth module.

@@ -13,12 +13,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+	evmhd "github.com/cosmos/evm/crypto/hd"
 	"github.com/spf13/cobra"
 
 	"github.com/monolythium/mono-chain/app"
 )
 
-// NewRootCmd creates a new root command for monod. It is called once in the main function.
+// NewRootCmd creates a new root command for monod.
 func NewRootCmd() *cobra.Command {
 	// Bootstrap encoding and AutoCLI from a temporary app instance.
 	tempApp := app.New(log.NewNopLogger(), dbm.NewMemDB(), nil, true, simtestutil.EmptyAppOptions{})
@@ -31,7 +32,10 @@ func NewRootCmd() *cobra.Command {
 		WithInput(os.Stdin).
 		WithAccountRetriever(types.AccountRetriever{}).
 		WithHomeDir(app.DefaultNodeHome).
-		WithViper(app.AppName)
+		WithViper(app.AppName).
+		// EVM keyring: enables eth_secp256k1 key algorithm
+		WithKeyringOptions(evmhd.EthSecp256k1Option()).
+		WithLedgerHasProtobuf(true)
 
 	initClientCtx, _ = clientcfg.ReadFromClientConfig(initClientCtx)
 

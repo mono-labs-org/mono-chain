@@ -11,9 +11,7 @@ import (
 	confixcmd "cosmossdk.io/tools/confix/cmd"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/debug"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/pruning"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/client/snapshot"
@@ -23,6 +21,9 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
+	cosmosevmcmd "github.com/cosmos/evm/client"
+	cosmosevmserver "github.com/cosmos/evm/server"
+	srvflags "github.com/cosmos/evm/server/flags"
 
 	"github.com/monolythium/mono-chain/app"
 )
@@ -36,15 +37,23 @@ func initRootCmd(
 		genutilcli.InitCmd(basicManager, app.DefaultNodeHome),
 		NewInPlaceTestnetCmd(),
 		NewTestnetMultiNodeCmd(basicManager, banktypes.GenesisBalancesIterator{}),
-		debug.Cmd(),
 		confixcmd.ConfigCommand(),
-		pruning.Cmd(newApp, app.DefaultNodeHome),
-		snapshot.Cmd(newApp),
+		pruning.Cmd(sdkNewApp, app.DefaultNodeHome),
+		snapshot.Cmd(sdkNewApp),
 	)
 
-	server.AddCommandsWithStartCmdOptions(rootCmd, app.DefaultNodeHome, newApp, appExport, server.StartCmdOptions{
-		AddFlags: addModuleInitFlags,
-	})
+	// cosmos/evm server commands (replaces standard server.AddCommands)
+	cosmosevmserver.AddCommands(
+		rootCmd,
+		cosmosevmserver.NewDefaultStartOptions(newApp, app.DefaultNodeHome),
+		appExport,
+		addModuleInitFlags,
+	)
+
+	// cosmos/evm key commands (supports eth_secp256k1)
+	rootCmd.AddCommand(
+		cosmosevmcmd.KeyCommands(app.DefaultNodeHome, true),
+	)
 
 	// add keybase, auxiliary RPC, query, genesis, and tx child commands
 	rootCmd.AddCommand(
@@ -52,8 +61,12 @@ func initRootCmd(
 		genutilcli.Commands(txConfig, basicManager, app.DefaultNodeHome),
 		queryCommand(),
 		txCommand(),
-		keys.Commands(),
 	)
+
+	// EVM-specific transaction flags
+	if _, err := srvflags.AddTxFlags(rootCmd); err != nil {
+		panic(err)
+	}
 }
 
 // addModuleInitFlags adds more flags to the start command.
@@ -69,7 +82,6 @@ func queryCommand() *cobra.Command {
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
-
 	cmd.AddCommand(
 		rpc.WaitTxCmd(),
 		rpc.ValidatorCommand(),
@@ -79,7 +91,6 @@ func queryCommand() *cobra.Command {
 		authcmd.QueryTxCmd(),
 		server.QueryBlockResultsCmd(),
 	)
-
 	return cmd
 }
 
@@ -91,7 +102,6 @@ func txCommand() *cobra.Command {
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
-
 	cmd.AddCommand(
 		authcmd.GetSignCommand(),
 		authcmd.GetSignBatchCommand(),
@@ -104,19 +114,17 @@ func txCommand() *cobra.Command {
 		authcmd.GetDecodeCommand(),
 		authcmd.GetSimulateCmd(),
 	)
-
 	return cmd
 }
 
-// newApp creates the application
+// newApp creates the application for cosmos/evm server (returns cosmosevmserver.Application)
 func newApp(
 	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
 	appOpts servertypes.AppOptions,
-) servertypes.Application {
+) cosmosevmserver.Application {
 	baseappOptions := server.DefaultBaseappOptions(appOpts)
-
 	return app.New(
 		logger, db, traceStore, true,
 		appOpts,
@@ -124,7 +132,16 @@ func newApp(
 	)
 }
 
-// appExport creates a new app (optionally at a given height) and exports state.
+// sdkNewApp wraps for SDK's pruning/snapshot commands that expect servertypes.Application
+func sdkNewApp(
+	logger log.Logger,
+	db dbm.DB,
+	traceStore io.Writer,
+	appOpts servertypes.AppOptions,
+) servertypes.Application {
+	return newApp(logger, db, traceStore, appOpts)
+}
+
 func appExport(
 	logger log.Logger,
 	db dbm.DB,

@@ -5,9 +5,14 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-
-	// minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	evmutils "github.com/cosmos/evm/utils"
+	erc20types "github.com/cosmos/evm/x/erc20/types"
+	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
+	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	burnmoduletypes "github.com/monolythium/mono-chain/x/burn/types"
 	monomoduletypes "github.com/monolythium/mono-chain/x/mono/types"
 )
@@ -26,17 +31,27 @@ const (
 	CoinType = 60 // Ethereum
 
 	DefaultBondDenom = "alyth"
+
+	// MaxIBCCallbackGas is the maximum gas allowed for IBC callbacks.
+	// This is consensus-critical and must be consistent across all nodes.
+	MaxIBCCallbackGas = uint64(1_000_000)
 )
 
 // maccPerms defines module account permissions.
 var maccPerms = map[string][]string{
-	authtypes.FeeCollectorName: nil,
-	distrtypes.ModuleName:      nil,
-	// minttypes.ModuleName:           {authtypes.Minter},
+	authtypes.FeeCollectorName:     nil,
+	distrtypes.ModuleName:          nil,
 	stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
 	stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
 	burnmoduletypes.ModuleName:     {authtypes.Burner},
 	monomoduletypes.ModuleName:     {authtypes.Burner},
+	minttypes.ModuleName:           {authtypes.Minter},
+	// EVM module accounts
+	evmtypes.ModuleName:         {authtypes.Minter, authtypes.Burner},
+	erc20types.ModuleName:       {authtypes.Minter, authtypes.Burner},
+	feemarkettypes.ModuleName:   nil,
+	ibctransfertypes.ModuleName: {authtypes.Minter, authtypes.Burner},
+	govtypes.ModuleName:         {authtypes.Burner},
 }
 
 // blockAccAddrs are addresses that cannot receive funds.
@@ -51,6 +66,7 @@ var blockAccAddrs = []string{
 var DefaultNodeHome string
 
 func init() {
+	sdk.DefaultPowerReduction = evmutils.AttoPowerReduction
 	sdk.DefaultBondDenom = DefaultBondDenom
 	clienthelpers.EnvPrefix = AppName
 

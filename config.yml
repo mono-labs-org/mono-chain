@@ -5,23 +5,103 @@ build:
 validation: sovereign
 genesis:
   app_name: mono
-  chain_id: mono
+  chain_id: mono_262145-1
   app_state:
+    bank:
+      denom_metadata:
+        - name: "Monolythium"
+          symbol: LYTH
+          display: lyth
+          base: alyth
+          description: "The native token of Monolythium"
+          denom_units:
+            - denom: alyth
+              exponent: 0
+              aliases: [attolyth]
+            - denom: lyth
+              exponent: 18
+              aliases: []
+    distribution:
+      params:
+        community_tax: "0.1"
+    ibc:
+      client_genesis:
+        params:
+          allowed_clients:
+            - "07-tendermint"
+            - "06-solomachine"
+    erc20:
+      params:
+        enable_erc20: true
+        permissionless_registration: true
+      token_pairs:
+        - erc20_address: "0x4cf63fe01ffe0f27dc59c68e284f381599e14860"
+          denom: alyth
+          enabled: true
+          contract_owner: OWNER_MODULE
+      native_precompiles:
+        - "0x4cf63fe01ffe0f27dc59c68e284f381599e14860"
+    evm:
+      params:
+        evm_denom: alyth
+        extended_denom_options:
+          extended_denom: alyth
+    feemarket:
+      params:
+        no_base_fee: false
+        base_fee_change_denominator: 8
+        elasticity_multiplier: 2
+        enable_height: "1"
+        base_fee: "1000000000"
+        min_gas_price: "0.001"
+        min_gas_multiplier: "0.5"
+    gov:
+      params:
+        min_deposit:
+          - denom: alyth
+            amount: "10000000000000000000"
+        expedited_min_deposit:
+          - denom: alyth
+            amount: "50000000000000000000"
+    mint:
+      minter:
+        inflation: "0.08"
+        annual_provisions: "0"
+      params:
+        mint_denom: alyth
+        inflation_rate_change: "0"
+        inflation_max: "0.08"
+        inflation_min: "0.08"
+        goal_bonded: "0.67"
+        blocks_per_year: "15768000"
     mono:
       params:
         fee_burn_percent: "0.9"
         validator_registration_fee:
           denom: alyth
           amount: "100000000000000000000000"
+    staking:
+      params:
+        unbonding_time: "1814400s"
+        max_validators: 53
+        bond_denom: alyth
 default_denom: alyth
-accounts: 
+accounts:
 - name: alice
   coins:
-  - 200000000alyth
+  - 300000000000000000000000alyth
   cointype: 60
 - name: bob
   coins:
-  - 100000000alyth
+  - 200000000000000000000000alyth
+  cointype: 60
+- name: validator1
+  coins:
+  - 300000000000000000000000alyth
+  cointype: 60
+- name: validator2
+  coins:
+  - 400000000000000000000000alyth
   cointype: 60
 client:
   openapi:
@@ -33,10 +113,25 @@ faucet:
 validators:
 - name: alice
   home: ~/.mono
-  bonded: 100000000alyth
+  bonded: 150000000000000000000000alyth
+  app:
+    evm:
+      evm-chain-id: "262145"
+    json-rpc:
+      enable: true
 - name: validator1
-  home: ~/.mono
-  bonded: 200000000alyth
+  home: ~/.mono-val1
+  bonded: 100000000000000000000000alyth
+  app:
+    evm:
+      evm-chain-id: "262145"
+    json-rpc:
+      enable: true
 - name: validator2
-  home: ~/.mono
-  bonded: 100000000alyth
+  home: ~/.mono-val2
+  bonded: 200000000000000000000000alyth
+  app:
+    evm:
+      evm-chain-id: "262145"
+    json-rpc:
+      enable: true
