@@ -7,6 +7,7 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
+	protocolpooltypes "github.com/cosmos/cosmos-sdk/x/protocolpool/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	evmutils "github.com/cosmos/evm/utils"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
@@ -37,13 +38,15 @@ const (
 
 // maccPerms defines module account permissions.
 var maccPerms = map[string][]string{
-	authtypes.FeeCollectorName:     nil,
-	distrtypes.ModuleName:          nil,
-	stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
-	stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
-	burnmoduletypes.ModuleName:     {authtypes.Burner},
-	monomoduletypes.ModuleName:     {authtypes.Burner},
-	minttypes.ModuleName:           {authtypes.Minter},
+	authtypes.FeeCollectorName:                  nil,
+	distrtypes.ModuleName:                       nil,
+	protocolpooltypes.ModuleName:                nil,
+	protocolpooltypes.ProtocolPoolEscrowAccount: nil,
+	stakingtypes.BondedPoolName:                 {authtypes.Burner, authtypes.Staking},
+	stakingtypes.NotBondedPoolName:              {authtypes.Burner, authtypes.Staking},
+	burnmoduletypes.ModuleName:                  {authtypes.Burner},
+	monomoduletypes.ModuleName:                  {authtypes.Burner},
+	minttypes.ModuleName:                        {authtypes.Minter},
 	// EVM module accounts
 	evmtypes.ModuleName:         {authtypes.Minter, authtypes.Burner},
 	erc20types.ModuleName:       {authtypes.Minter, authtypes.Burner},

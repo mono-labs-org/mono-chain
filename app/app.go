@@ -68,6 +68,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/mint"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
+	"github.com/cosmos/cosmos-sdk/x/protocolpool"
+	protocolpoolkeeper "github.com/cosmos/cosmos-sdk/x/protocolpool/keeper"
+	protocolpooltypes "github.com/cosmos/cosmos-sdk/x/protocolpool/types"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
@@ -148,6 +151,7 @@ type App struct {
 	BankKeeper            bankkeeper.Keeper
 	StakingKeeper         *stakingkeeper.Keeper
 	DistrKeeper           distrkeeper.Keeper
+	ProtocolPoolKeeper    protocolpoolkeeper.Keeper
 	MintKeeper            mintkeeper.Keeper
 	BurnKeeper            burnmodulekeeper.Keeper
 	MonoKeeper            monomodulekeeper.Keeper
@@ -225,6 +229,7 @@ func New(
 		govtypes.StoreKey,
 		slashingtypes.StoreKey,
 		evidencetypes.StoreKey,
+		protocolpooltypes.StoreKey,
 	)
 	tkeys := storetypes.NewTransientStoreKeys(
 		evmtypes.TransientKey,
@@ -286,6 +291,14 @@ func New(
 		consensusAddressCodec,
 	)
 
+	app.ProtocolPoolKeeper = protocolpoolkeeper.NewKeeper(
+		appCodec,
+		runtime.NewKVStoreService(keys[protocolpooltypes.StoreKey]),
+		app.AuthKeeper,
+		app.BankKeeper,
+		authAddr,
+	)
+
 	app.DistrKeeper = distrkeeper.NewKeeper(
 		appCodec,
 		runtime.NewKVStoreService(keys[distrtypes.StoreKey]),
@@ -294,6 +307,7 @@ func New(
 		app.StakingKeeper,
 		authtypes.FeeCollectorName,
 		authAddr,
+		distrkeeper.WithExternalCommunityPool(app.ProtocolPoolKeeper),
 	)
 
 	app.MintKeeper = mintkeeper.NewKeeper(
@@ -499,6 +513,7 @@ func New(
 		auth.NewAppModule(appCodec, app.AuthKeeper, authsims.RandomGenesisAccounts, nil),
 		bank.NewAppModule(appCodec, app.BankKeeper, app.AuthKeeper, nil),
 		staking.NewAppModule(appCodec, app.StakingKeeper, app.AuthKeeper, app.BankKeeper, nil),
+		protocolpool.NewAppModule(app.ProtocolPoolKeeper, app.AuthKeeper, app.BankKeeper),
 		distribution.NewAppModule(appCodec, app.DistrKeeper, app.AuthKeeper, app.BankKeeper, app.StakingKeeper, nil),
 		mint.NewAppModule(appCodec, app.MintKeeper, app.AuthKeeper, nil, nil),
 		consensus.NewAppModule(appCodec, app.ConsensusParamsKeeper),
@@ -549,9 +564,11 @@ func New(
 		// Economic pipeline
 		// fee_split drains tx fees BEFORE mint creates inflation tokens.
 		// mint creates tokens AFTER fees are processed, so distr only sees minted rewards.
+		// protocolpool distributes from escrow AFTER distr sends to it.
 		monomoduletypes.ModuleName,
 		minttypes.ModuleName,
 		distrtypes.ModuleName,
+		protocolpooltypes.ModuleName,
 		slashingtypes.ModuleName,
 		evidencetypes.ModuleName,
 		stakingtypes.ModuleName,
@@ -589,6 +606,7 @@ func New(
 		upgradetypes.ModuleName,
 		consensustypes.ModuleName,
 		vestingtypes.ModuleName,
+		protocolpooltypes.ModuleName,
 	)
 
 	// Module initialization order from genesis state (chain start)
@@ -615,13 +633,47 @@ func New(
 		// Vesting (no dependency order)
 		vestingtypes.ModuleName,
 
-		// Custom modules MUST init before genutil
+		// Custom modules + protocolpool MUST init before genutil
 		// genutil processes gentxs which trigger BeginBlocker,
 		// and mono's ProcessFeeSplit needs params set
 		burnmoduletypes.ModuleName,
 		monomoduletypes.ModuleName,
+		protocolpooltypes.ModuleName,
 
 		// Genesis txs + post-genesis
+		genutiltypes.ModuleName,
+		evidencetypes.ModuleName,
+		upgradetypes.ModuleName,
+	)
+
+	// Module export order when snapshotting chain state
+	app.ModuleManager.SetOrderExportGenesis(
+		// Core accounts (auth creates modules accounts, bank needs auth)
+		consensustypes.ModuleName, // Defensive no-op (no `HasGenesis`)
+		authtypes.ModuleName,
+		protocolpooltypes.ModuleName, // Must be exported before bank
+		banktypes.ModuleName,
+
+		// Economic pipeline
+		distrtypes.ModuleName,
+		stakingtypes.ModuleName,
+		slashingtypes.ModuleName,
+		govtypes.ModuleName,
+		minttypes.ModuleName,
+
+		// IBC + EVM
+		ibcexported.ModuleName,
+		evmtypes.ModuleName,
+		feemarkettypes.ModuleName,
+		erc20types.ModuleName,
+		ibctransfertypes.ModuleName,
+
+		// Vesting + custom modules
+		vestingtypes.ModuleName,
+		burnmoduletypes.ModuleName,
+		monomoduletypes.ModuleName,
+
+		// Post-genesis
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
 		upgradetypes.ModuleName,
