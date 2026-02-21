@@ -530,18 +530,23 @@ func New(
 	app.BasicModuleManager.RegisterLegacyAminoCodec(legacyAmino)
 	app.BasicModuleManager.RegisterInterfaces(interfaceRegistry)
 
-	// Module ordering
+	// Module execution ordering BEFORE the start of each block
 	app.ModuleManager.SetOrderPreBlockers(
 		upgradetypes.ModuleName,
 		authtypes.ModuleName,
 		evmtypes.ModuleName,
 	)
+
+	// Module execution ordering AT the START of each block
 	app.ModuleManager.SetOrderBeginBlockers(
+		// IBC + EVM infra
 		ibcexported.ModuleName,
 		ibctransfertypes.ModuleName,
 		erc20types.ModuleName,
 		feemarkettypes.ModuleName,
 		evmtypes.ModuleName,
+
+		// Economic pipeline
 		// fee_split drains tx fees BEFORE mint creates inflation tokens.
 		// mint creates tokens AFTER fees are processed, so distr only sees minted rewards.
 		monomoduletypes.ModuleName,
@@ -551,6 +556,8 @@ func New(
 		slashingtypes.ModuleName,
 		evidencetypes.ModuleName,
 		stakingtypes.ModuleName,
+
+		// Defensive no-ops per cosmos/evm (evmd/app.go)
 		authtypes.ModuleName,
 		banktypes.ModuleName,
 		govtypes.ModuleName,
@@ -558,14 +565,21 @@ func New(
 		consensustypes.ModuleName,
 		vestingtypes.ModuleName,
 	)
+
+	// Module execution ordering AT the END of each block
 	app.ModuleManager.SetOrderEndBlockers(
+		// State transitions
 		govtypes.ModuleName,
 		stakingtypes.ModuleName,
+
+		// EVM block finalization
+		evmtypes.ModuleName,
+		feemarkettypes.ModuleName,
+
+		// Defensive no-ops
 		authtypes.ModuleName,
 		banktypes.ModuleName,
-		evmtypes.ModuleName,
 		erc20types.ModuleName,
-		feemarkettypes.ModuleName,
 		ibcexported.ModuleName,
 		ibctransfertypes.ModuleName,
 		monomoduletypes.ModuleName,
@@ -579,26 +593,38 @@ func New(
 		consensustypes.ModuleName,
 		vestingtypes.ModuleName,
 	)
+
+	// Module initialization order from genesis state (chain start)
 	app.ModuleManager.SetOrderInitGenesis(
-		consensustypes.ModuleName,
+		// Core accounts (auth creates modules accounts, bank needs auth)
+		consensustypes.ModuleName, // Defensive no-op (no `HasGenesis`)
 		authtypes.ModuleName,
 		banktypes.ModuleName,
+
+		// Economic pipeline
 		distrtypes.ModuleName,
 		stakingtypes.ModuleName,
 		slashingtypes.ModuleName,
 		govtypes.ModuleName,
 		minttypes.ModuleName,
+
+		// IBC + EVM (evm -> feemarket -> erc20)
 		ibcexported.ModuleName,
 		evmtypes.ModuleName,
 		feemarkettypes.ModuleName,
 		erc20types.ModuleName,
 		ibctransfertypes.ModuleName,
+
+		// Vesting (no dependency order)
 		vestingtypes.ModuleName,
-		// mono + burn MUST init before genutil
+
+		// Custom modules MUST init before genutil
 		// genutil processes gentxs which trigger BeginBlocker,
 		// and mono's ProcessFeeSplit needs params set
 		burnmoduletypes.ModuleName,
 		monomoduletypes.ModuleName,
+
+		// Genesis txs + post-genesis
 		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
 		upgradetypes.ModuleName,

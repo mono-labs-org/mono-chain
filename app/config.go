@@ -32,8 +32,6 @@ const (
 
 	DefaultBondDenom = "alyth"
 
-	// MaxIBCCallbackGas is the maximum gas allowed for IBC callbacks.
-	// This is consensus-critical and must be consistent across all nodes.
 	MaxIBCCallbackGas = uint64(1_000_000)
 )
 
