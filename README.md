@@ -1,6 +1,14 @@
 # Monolythium
 
-**Monolythium** is a blockchain built using Cosmos SDK and Tendermint and created with [Ignite CLI](https://ignite.com/cli).
+**Monolythium** is a blockchain built using Cosmos SDK and Tendermint.
+
+## Networks
+
+| Network   | EVM Chain ID (HEX)  | Cosmos Chain ID |
+| :-------: | :-----------------: | :-------------: |
+| mainnet   | `6941` (`0x1b1d`)   | `mono_6941-1`   |
+| testnet   | `6940` (`0x1b1c`)   | `mono_6940-1`   |
+| sprintnet | `262146` (`0x4002`) | `mono-sprint-1` |
 
 ## Get started
 

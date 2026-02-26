@@ -5,7 +5,7 @@ build:
 validation: sovereign
 genesis:
   app_name: mono
-  chain_id: mono_262145-1
+  chain_id: mono_6940-1
   app_state:
     bank:
       denom_metadata:
