@@ -10,7 +10,7 @@ import (
 	protocolpooltypes "github.com/cosmos/cosmos-sdk/x/protocolpool/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	corevm "github.com/ethereum/go-ethereum/core/vm"
-	evmutils "github.com/cosmos/evm/utils"
+	utils "github.com/cosmos/evm/utils"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
@@ -68,7 +68,7 @@ var blockAccAddrs = []string{
 var DefaultNodeHome string
 
 func init() {
-	sdk.DefaultPowerReduction = evmutils.AttoPowerReduction
+	sdk.DefaultPowerReduction = utils.AttoPowerReduction
 	sdk.DefaultBondDenom = DefaultBondDenom
 	clienthelpers.EnvPrefix = AppName
 
@@ -122,7 +122,7 @@ func BlockedAddresses() map[string]bool {
 	}
 	// Convert all precompile addresses to Bech32 and block them
 	for _, precompile := range blockedPrecompiles {
-		result[evmutils.Bech32StringFromHexAddress(precompile)] = true
+		result[utils.Bech32StringFromHexAddress(precompile)] = true
 	}
 
 	return result

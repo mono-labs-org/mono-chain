@@ -22,7 +22,7 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	evmutils "github.com/cosmos/evm/utils"
+	utils "github.com/cosmos/evm/utils"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
@@ -103,7 +103,7 @@ func TestAppInit_EVMStoreKeysRegistered(t *testing.T) {
 }
 
 func TestPowerReduction_Is18Decimals(t *testing.T) {
-	expected := evmutils.AttoPowerReduction
+	expected := utils.AttoPowerReduction
 	require.True(t, sdk.DefaultPowerReduction.Equal(expected),
 		"DefaultPowerReduction should be AttoPowerReduction, got %s", sdk.DefaultPowerReduction)
 
@@ -407,14 +407,14 @@ func TestBlockedAddresses_PrecompilesBlocked(t *testing.T) {
 	}
 
 	for _, hexAddr := range ethPrecompiles {
-		bech32Addr := evmutils.Bech32StringFromHexAddress(hexAddr)
+		bech32Addr := utils.Bech32StringFromHexAddress(hexAddr)
 		require.True(t, blocked[bech32Addr],
 			"Ethereum precompile %s must be blocked", hexAddr)
 	}
 
 	// Test Cosmos EVM precompiles from AvailableStaticPrecompiles are blocked
 	for _, precompileHex := range evmtypes.AvailableStaticPrecompiles {
-		bech32Addr := evmutils.Bech32StringFromHexAddress(precompileHex)
+		bech32Addr := utils.Bech32StringFromHexAddress(precompileHex)
 		require.True(t, blocked[bech32Addr],
 			"Cosmos precompile %s must be blocked", precompileHex)
 	}

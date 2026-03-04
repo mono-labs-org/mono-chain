@@ -15,6 +15,10 @@ import (
 	monoante "github.com/monolythium/mono-chain/x/mono/ante"
 )
 
+func (app *App) getAnteHandler() sdk.AnteHandler {
+	return app.AnteHandler()
+}
+
 // setAnteHandler builds the cosmos/evm ante handler and wraps it
 // with the validator registration burn decorator.
 func (app *App) setAnteHandler(txConfig client.TxConfig, appOpts servertypes.AppOptions) {

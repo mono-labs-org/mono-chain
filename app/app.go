@@ -89,7 +89,6 @@ import (
 	"github.com/cosmos/gogoproto/proto"
 
 	// cosmos/evm imports
-	evmconfig "github.com/cosmos/evm/config"
 	evmencoding "github.com/cosmos/evm/encoding"
 	evmaddress "github.com/cosmos/evm/encoding/address"
 	evmmempool "github.com/cosmos/evm/mempool"
@@ -104,20 +103,19 @@ import (
 	feemarketkeeper "github.com/cosmos/evm/x/feemarket/keeper"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 	ibccallbackskeeper "github.com/cosmos/evm/x/ibc/callbacks/keeper"
-	"github.com/cosmos/evm/x/ibc/transfer"
-	transferkeeper "github.com/cosmos/evm/x/ibc/transfer/keeper"
-	transferv2 "github.com/cosmos/evm/x/ibc/transfer/v2"
-	"github.com/cosmos/evm/x/vm"
-	evmkeeper "github.com/cosmos/evm/x/vm/keeper"
-	evmtypes "github.com/cosmos/evm/x/vm/types"
+	transfer "github.com/cosmos/ibc-go/v10/modules/apps/transfer"
+	transferkeeper "github.com/cosmos/ibc-go/v10/modules/apps/transfer/keeper"
 
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
+	"github.com/cosmos/evm/x/vm"
+	evmkeeper "github.com/cosmos/evm/x/vm/keeper"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
+	transferv2 "github.com/cosmos/ibc-go/v10/modules/apps/transfer/v2"
 
 	// IBC imports
 	ibccallbacks "github.com/cosmos/ibc-go/v10/modules/apps/callbacks"
-	ibctransfer "github.com/cosmos/ibc-go/v10/modules/apps/transfer"
 	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v10/modules/core"
 	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
@@ -501,7 +499,6 @@ func New(
 			&app.Erc20Keeper,
 			&app.TransferKeeper,
 			app.IBCKeeper.ChannelKeeper,
-			// app.IBCKeeper.ClientKeeper,
 			app.GovKeeper,
 			app.SlashingKeeper,
 			appCodec,
@@ -524,12 +521,12 @@ func New(
 	app.TransferKeeper = transferkeeper.NewKeeper(
 		appCodec,
 		runtime.NewKVStoreService(keys[ibctransfertypes.StoreKey]),
+		nil, // ICS4Wrapper param
 		app.IBCKeeper.ChannelKeeper,
 		app.IBCKeeper.ChannelKeeper,
 		app.MsgServiceRouter(),
 		app.AccountKeeper,
 		app.BankKeeper,
-		app.Erc20Keeper, // Add ERC20 Keeper for ERC20 transfers
 		authAddr,
 	)
 
@@ -614,7 +611,7 @@ func New(
 			genutiltypes.ModuleName:     genutil.NewAppModuleBasic(genutiltypes.DefaultMessageValidator),
 			stakingtypes.ModuleName:     staking.AppModuleBasic{},
 			govtypes.ModuleName:         gov.NewAppModuleBasic(nil),
-			ibctransfertypes.ModuleName: transfer.AppModuleBasic{AppModuleBasic: &ibctransfer.AppModuleBasic{}},
+			ibctransfertypes.ModuleName: transfer.AppModuleBasic{},
 		},
 	)
 	app.BasicModuleManager.RegisterLegacyAminoCodec(legacyAmino)
@@ -840,12 +837,7 @@ func (app *App) InitChainer(ctx sdk.Context, req *abci.RequestInitChain) (*abci.
 	}
 
 	// Inject EVM preinstalled contracts
-	var evmGenesis evmtypes.GenesisState
-	if raw, ok := genesisState[evmtypes.ModuleName]; ok {
-		app.appCodec.MustUnmarshalJSON(raw, &evmGenesis)
-		evmGenesis.Preinstalls = evmtypes.DefaultPreinstalls
-		genesisState[evmtypes.ModuleName] = app.appCodec.MustMarshalJSON(&evmGenesis)
-	}
+	app.NewEVMGenesisState(genesisState)
 
 	if err := app.UpgradeKeeper.SetModuleVersionMap(ctx, app.ModuleManager.GetVersionMap()); err != nil {
 		panic(err)
@@ -877,50 +869,6 @@ func (app *App) SetClientCtx(clientCtx client.Context) {
 // Configurator returns the module configurator for upgrade migrations
 func (app *App) Configurator() module.Configurator {
 	return app.configurator
-}
-
-// EVM mempool configuration
-
-func (app *App) configureEVMMempool(appOpts servertypes.AppOptions, logger log.Logger) error {
-	cosmosPoolMaxTx := evmconfig.GetCosmosPoolMaxTx(appOpts, logger)
-	if cosmosPoolMaxTx < 0 {
-		logger.Debug("app-side mempool is disabled")
-		return nil
-	}
-
-	mempoolConfig := &evmmempool.EVMMempoolConfig{
-		AnteHandler:      app.AnteHandler(),
-		LegacyPoolConfig: evmconfig.GetLegacyPoolConfig(appOpts, logger),
-		BlockGasLimit:    evmconfig.GetBlockGasLimit(appOpts, logger),
-		MinTip:           evmconfig.GetMinTip(appOpts, logger),
-	}
-
-	evmMempool := evmmempool.NewExperimentalEVMMempool(
-		app.CreateQueryContext,
-		logger,
-		app.EVMKeeper,
-		app.FeeMarketKeeper,
-		app.txConfig,
-		app.clientCtx,
-		mempoolConfig,
-		cosmosPoolMaxTx,
-	)
-	app.EVMMempool = evmMempool
-	app.SetMempool(evmMempool)
-
-	checkTxHandler := evmmempool.NewCheckTxHandler(evmMempool)
-	app.SetCheckTxHandler(checkTxHandler)
-
-	abciProposalHandler := baseapp.NewDefaultProposalHandler(evmMempool, app)
-	abciProposalHandler.SetSignerExtractionAdapter(
-		evmmempool.NewEthSignerExtractionAdapter(
-			sdkmempool.NewDefaultSignerExtractionAdapter(),
-		),
-	)
-	app.SetPrepareProposal(abciProposalHandler.PrepareProposalHandler())
-	app.SetProcessProposal(abciProposalHandler.ProcessProposalHandler())
-
-	return nil
 }
 
 func (app *App) setPostHandler() {

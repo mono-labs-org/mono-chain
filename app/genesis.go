@@ -2,6 +2,8 @@ package app
 
 import (
 	"encoding/json"
+
+	evmtypes "github.com/cosmos/evm/x/vm/types"
 )
 
 // GenesisState of the blockchain is represented here as a map of raw json
@@ -12,3 +14,12 @@ import (
 // the ModuleBasicManager which populates json from each BasicModule
 // object provided to it during init.
 type GenesisState map[string]json.RawMessage
+
+func (app *App) NewEVMGenesisState(genesisState map[string]json.RawMessage) {
+	if raw, ok := genesisState[evmtypes.ModuleName]; ok {
+		var evmGenesis evmtypes.GenesisState
+		app.appCodec.MustUnmarshalJSON(raw, &evmGenesis)
+		evmGenesis.Preinstalls = evmtypes.DefaultPreinstalls
+		genesisState[evmtypes.ModuleName] = app.appCodec.MustMarshalJSON(&evmGenesis)
+	}
+}
