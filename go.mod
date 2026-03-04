@@ -66,6 +66,12 @@ require (
 	github.com/cosmos/evm v0.5.1
 	github.com/cosmos/gogoproto v1.7.2
 	github.com/cosmos/ibc-go/v10 v10.5.0
+
+	// CVE-2026-22862, CVE-2026-22868, CVE-2026-26313, CVE-2026-26314: Improper input validation - UNREACHABLE
+	// CVE-2026-26315: Information disclosure via side-channel - UNREACHABLE
+	// required by cosmos/evm; replaced with cosmos/go-ethereum fork
+	// P2P vulnerabilities - Unused in p2p layer; only EVM/state components imported
+	// TODO: Remove comment after cosmos/evm -> cosmos/go-ethereum merges base >= v1.16.9
 	github.com/ethereum/go-ethereum v1.15.11
 	github.com/golang/protobuf v1.5.4
 	github.com/gorilla/mux v1.8.1
