@@ -97,7 +97,7 @@ genesis:
           percentage: "1.000000000000000000"
     staking:
       params:
-        unbonding_time: "1814400s"
+        unbonding_time: "259200s"
         max_validators: 53
         bond_denom: alyth
     validator:
