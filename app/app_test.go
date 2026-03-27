@@ -21,6 +21,7 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
+	epochstypes "github.com/cosmos/cosmos-sdk/x/epochs/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	utils "github.com/cosmos/evm/utils"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
@@ -71,6 +72,7 @@ func TestAppInit_KeepersNonNil(t *testing.T) {
 	require.NotNil(t, a.EVMKeeper)
 	require.NotNil(t, a.FeeMarketKeeper)
 	require.NotNil(t, a.IBCKeeper)
+	require.NotNil(t, a.EpochsKeeper)
 	require.NotNil(t, a.BurnKeeper)
 	require.NotNil(t, a.ValidatorKeeper)
 	require.NotNil(t, a.AuthzKeeper)
@@ -232,6 +234,9 @@ func TestDefaultGenesis_EVMModulesRegistered(t *testing.T) {
 func TestDefaultGenesis_CustomModulesPresent(t *testing.T) {
 	a := newTestApp(t)
 	genesis := a.DefaultGenesis()
+
+	_, hasEpochs := genesis[epochstypes.ModuleName]
+	require.True(t, hasEpochs)
 
 	_, hasBurn := genesis[burnmoduletypes.ModuleName]
 	require.True(t, hasBurn)

@@ -69,6 +69,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/distribution"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	"github.com/cosmos/cosmos-sdk/x/epochs"
+	epochskeeper "github.com/cosmos/cosmos-sdk/x/epochs/keeper"
+	epochstypes "github.com/cosmos/cosmos-sdk/x/epochs/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
@@ -180,6 +183,7 @@ type App struct {
 	ConsensusParamsKeeper consensusparamkeeper.Keeper
 
 	// Custom keepers
+	EpochsKeeper    epochskeeper.Keeper
 	BurnKeeper      burnmodulekeeper.Keeper
 	ValidatorKeeper validatormodulekeeper.Keeper
 
@@ -245,6 +249,7 @@ func New(
 		govtypes.StoreKey, consensusparamtypes.StoreKey,
 		upgradetypes.StoreKey, feegrant.StoreKey, evidencetypes.StoreKey, authzkeeper.StoreKey,
 		// mono keys
+		epochstypes.StoreKey,
 		burnmoduletypes.StoreKey,
 		validatormoduletypes.StoreKey,
 		// ibc keys
@@ -383,6 +388,14 @@ func New(
 		appCodec,
 		runtime.NewKVStoreService(keys[feegrant.StoreKey]),
 		app.AccountKeeper,
+	)
+
+	app.EpochsKeeper = epochskeeper.NewKeeper(
+		runtime.NewKVStoreService(keys[epochstypes.StoreKey]),
+		appCodec,
+	)
+	app.EpochsKeeper.SetHooks(
+		epochstypes.NewMultiEpochHooks(),
 	)
 
 	app.BurnKeeper = burnmodulekeeper.NewKeeper(
@@ -613,6 +626,7 @@ func New(
 		feemarket.NewAppModule(app.FeeMarketKeeper),
 		erc20.NewAppModule(app.Erc20Keeper, app.AccountKeeper),
 		// Monolythium modules
+		epochs.NewAppModule(app.EpochsKeeper),
 		burnmodule.NewAppModule(appCodec, app.BurnKeeper, addressCodec),
 		validatormodule.NewAppModule(appCodec, app.ValidatorKeeper, app.StakingKeeper),
 		//
@@ -649,6 +663,8 @@ func New(
 	// NOTE: staking module is required if HistoricalEntries param > 0
 	// NOTE: capability module's beginblocker must come before any modules using capabilities (e.g. IBC)
 	app.ModuleManager.SetOrderBeginBlockers(
+		// Epoch tracking - must run before any module that depends on epoch state
+		epochstypes.ModuleName,
 		// Economic pipeline - burn processes tx fees first, THEN mint creates inflation
 		burnmoduletypes.ModuleName,
 		minttypes.ModuleName,
@@ -725,6 +741,7 @@ func New(
 		// Custom modules + protocolpool MUST init before genutil
 		// genutil processes gentxs which trigger BeginBlocker,
 		// and mono's ProcessFeeBurn needs params set
+		epochstypes.ModuleName,
 		burnmoduletypes.ModuleName,
 		validatormoduletypes.ModuleName,
 		protocolpooltypes.ModuleName,
