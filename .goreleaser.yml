@@ -10,9 +10,8 @@ builds:
       - amd64
       - arm64
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     ldflags:
-      - -s -w
       - -X github.com/cosmos/cosmos-sdk/version.Name=mono
       - -X github.com/cosmos/cosmos-sdk/version.AppName=monod
       - -X github.com/cosmos/cosmos-sdk/version.Version={{ .Version }}
