@@ -82,6 +82,9 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/genproto/googleapis/api v0.0.0-20260128011058-8636f8732409
+	// CVE-2026-33186: gRPC-Go authorization bypass via missing leading slash in :path - UNREACHABLE
+	// required by cosmos-sdk; no gRPC auth interceptors in use
+	// TODO: Remove comment after cosmos-sdk bumps grpc >= v1.79.3
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11 // indirect
 )
